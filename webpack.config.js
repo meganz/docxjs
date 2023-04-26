@@ -6,10 +6,10 @@ const PATHS = {
 }
 
 function buildConfig(prod) {
-  const outputFilename = `[name]${prod ? '.min' : ''}.js`;
+  const outputFilename = `[name].js`;
 
   return {
-    mode: 'development',
+    mode: 'production',
     entry: {
       'docx-preview': PATHS.src + '/docx-preview.ts'
     },
@@ -20,7 +20,10 @@ function buildConfig(prod) {
       libraryTarget: 'umd',
       globalObject: 'globalThis'
     },
-    devtool: 'source-map',
+    optimization: {
+      minimize: false
+    },
+    devtool: false,
     module: {
       rules: [
         {
@@ -40,14 +43,6 @@ function buildConfig(prod) {
     },
     resolve: {
       extensions: ['.ts', '.js']
-    },
-    externals: {
-      "jszip": {
-        root: "JSZip",
-        commonjs: "jszip",
-        commonjs2: "jszip",
-        amd: "jszip"
-      },
     }
   }
 }

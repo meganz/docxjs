@@ -7,13 +7,13 @@
     "pretty": true,
     "removeComments": true,
     "preserveConstEnums": true,
-    "sourceMap": true,
+    "sourceMap": false,
     "noEmitHelpers": false,
     "importHelpers": false,
-    "target": "es6",
+    "target": "es2018",
     "outDir": "dist",
     "lib": [
-      "es6",
+      "es2018",
       "dom"
     ]
   },

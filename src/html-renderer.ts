@@ -78,7 +78,7 @@ export class HtmlRenderer {
 		if (!window.MathMLElement && options.useMathMLPolyfill) {
 			appendComment(styleContainer, "docxjs mathml polyfill styles");
 			styleContainer.appendChild(createStyleElement(mathMLCSS));
-		} 
+		}
 
 		if (document.themePart) {
 			appendComment(styleContainer, "docxjs document theme values");
@@ -605,7 +605,7 @@ section.${c}>article { margin-bottom: auto; }
 
 			for (const subStyle of subStyles) {
 				//TODO temporary disable modificators until test it well
-				var selector = `${style.target ?? ''}.${style.cssName}`; //${subStyle.mod ?? ''} 
+				var selector = `${style.target ?? ''}.${style.cssName}`; //${subStyle.mod ?? ''}
 
 				if (style.target != subStyle.target)
 					selector += ` ${subStyle.target}`;
@@ -669,7 +669,7 @@ section.${c}>article { margin-bottom: auto; }
 
 			case DomType.DeletedText:
 				return this.renderDeletedText(elem as WmlText);
-	
+
 			case DomType.Tab:
 				return this.renderTab(elem);
 
@@ -703,10 +703,10 @@ section.${c}>article { margin-bottom: auto; }
 
 			case DomType.VmlElement:
 				return this.renderVmlElement(elem as VmlElement);
-	
+
 			case DomType.MmlMath:
 				return this.renderContainerNS(elem, ns.mathML, "math", { xmlns: ns.mathML });
-	
+
 			case DomType.MmlMathParagraph:
 				return this.renderContainer(elem, "span");
 
@@ -728,7 +728,7 @@ section.${c}>article { margin-bottom: auto; }
 
 			case DomType.MmlSubscript:
 				return this.renderContainerNS(elem, ns.mathML, "msub");
-	
+
 			case DomType.MmlBase:
 				return this.renderContainerNS(elem, ns.mathML, "mrow");
 
@@ -893,7 +893,11 @@ section.${c}>article { margin-bottom: auto; }
 	}
 
 	renderSymbol(elem: WmlSymbol) {
-		var span = this.createElement("span");
+		var span: any = 'mega.nz production build: prevent xss/html-injection';
+		if (!elem || !/^[\dA-Fa-f]{2,6}$/.test(elem.char)) {
+			return null;
+		}
+		span = this.createElement("span");
 		span.style.fontFamily = elem.font;
 		span.innerHTML = `&#x${elem.char};`
 		return span;
@@ -1054,15 +1058,15 @@ section.${c}>article { margin-bottom: auto; }
 			this.document?.loadDocumentImage(elem.imageHref.id, this.currentPart)
 				.then(x => result.setAttribute("href", x));
 		}
-		
+
 		container.appendChild(result);
 
-		setTimeout(() => {
+		requestAnimationFrame(() => {
 			const bb = (container.firstElementChild as any).getBBox();
 
 			container.setAttribute("width", `${Math.ceil(bb.x +  bb.width)}`);
 			container.setAttribute("height", `${Math.ceil(bb.y + bb.height)}`);
-		}, 0);
+		});
 
 		return container;
 	}
@@ -1078,7 +1082,7 @@ section.${c}>article { margin-bottom: auto; }
 		return createElementNS(ns.mathML, "mroot", null, this.renderElements([base, degree]));
 	}
 
-	renderMmlDelimiter(elem: OpenXmlElement): HTMLElement {		
+	renderMmlDelimiter(elem: OpenXmlElement): HTMLElement {
 		const children = [];
 
 		children.push(createElementNS(ns.mathML, "mo", null, [elem.props.beginChar ?? '(']));
@@ -1088,7 +1092,7 @@ section.${c}>article { margin-bottom: auto; }
 		return createElementNS(ns.mathML, "mrow", null, children);
 	}
 
-	renderMmlNary(elem: OpenXmlElement): HTMLElement {		
+	renderMmlNary(elem: OpenXmlElement): HTMLElement {
 		const children = [];
 		const grouped = keyBy(elem.children, x => x.type);
 
@@ -1239,7 +1243,7 @@ function createElementNS(ns: string, tagName: string, props?: Partial<Record<any
 }
 
 function removeAllElements(elem: HTMLElement) {
-	elem.innerHTML = '';
+	elem.textContent = '';
 }
 
 function appendChildren(elem: Element, children: (Node | string)[]) {
@@ -1247,7 +1251,7 @@ function appendChildren(elem: Element, children: (Node | string)[]) {
 }
 
 function createStyleElement(cssText: string) {
-	return createElement("style", { innerHTML: cssText });
+	return createElement("style", { textContent: cssText });
 }
 
 function appendComment(elem: HTMLElement, comment: string) {
