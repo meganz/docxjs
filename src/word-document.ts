@@ -60,7 +60,7 @@ export class WordDocument {
 		d.contentTypes = await d._package.loadContentTypes();
 
 		await Promise.all(topLevelRels.map(rel => {
-			const r = d.rels.find(x => x.type === rel.type) ?? rel; //fallback                    
+			const r = d.rels.find(x => x.type === rel.type) ?? rel; //fallback
 			return d.loadRelationshipPart(r.target, r.type);
 		}));
 
@@ -128,7 +128,7 @@ export class WordDocument {
 			case RelationshipTypes.CustomProperties:
 				part = new CustomPropsPart(this._package, path);
 				break;
-	
+
 			case RelationshipTypes.Settings:
 				this.settingsPart = part = new SettingsPart(this._package, path);
 				break;
@@ -173,11 +173,6 @@ export class WordDocument {
 		if (!path) return null;
 		const x = await this._package.load(path, "uint8array");
 		return x ? this.blobToURL(new Blob([deobfuscate(x, key)]), path) : x;
-	}
-
-	async loadAltChunk(id: string, part?: Part): Promise<string> {
-		const path = this.getPathById(part ?? this.documentPart, id);
-		return path ? this._package.load(path, "string") : Promise.resolve(null);
 	}
 
 	private blobToURL(blob: Blob, path?: string): string | Promise<string> {

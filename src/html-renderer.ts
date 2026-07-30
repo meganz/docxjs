@@ -46,7 +46,7 @@ export class HtmlRenderer {
 	rootSelector: string;
 	document: WordDocument;
 	options: Options;
-	styleMap: Record<string, IDomStyle> = {};
+	styleMap: null | Record<string, IDomStyle> = {};
 	currentPart: Part = null;
 
 	tableVerticalMerges: CellVerticalMergeType[] = [];
@@ -75,7 +75,7 @@ export class HtmlRenderer {
 		this.options = options;
 		this.className = options.className;
 		this.rootSelector = options.inWrapper ? `.${this.className}-wrapper` : ':root';
-		this.h = options.h ?? h;
+		this.h = h;
 		this.styleMap = null;
 		this.tasks = [];
 
@@ -167,7 +167,7 @@ export class HtmlRenderer {
 	}
 
 	async renderFontTable(fontsPart: FontTablePart) {
-		const result = [];
+		const result: any = [];
 
 		for (let f of fontsPart.fonts) {
 			for (let ref of f.embedFontRefs) {
@@ -320,7 +320,7 @@ export class HtmlRenderer {
 		}
 
 		return this.h({ tagName: "article", style });
-	}	
+	}
 
 	renderSections(document: DocumentElement): HTMLElement[] {
 		const result = [];
@@ -330,7 +330,7 @@ export class HtmlRenderer {
 		const pages = this.groupByPageBreaks(sections);
 		let prevProps = null;
 
-		for (let i = 0, l = pages.length; i < l; i++) {			
+		for (let i = 0, l = pages.length; i < l; i++) {
 			this.currentFootnoteIds = [];
 
 			const section = pages[i][0];
@@ -697,7 +697,7 @@ section.${c}>footer { z-index: 1; }
 
 			for (const subStyle of subStyles) {
 				//TODO temporary disable modificators until test it well
-				var selector = `${style.target ?? ''}.${style.cssName}`; //${subStyle.mod ?? ''} 
+				var selector = `${style.target ?? ''}.${style.cssName}`; //${subStyle.mod ?? ''}
 
 				if (style.target != subStyle.target)
 					selector += ` ${subStyle.target}`;
@@ -723,7 +723,7 @@ section.${c}>footer { z-index: 1; }
 		}
 	}
 
-	renderElement(elem: OpenXmlElement): Node | Node[] {
+	renderElement(elem: OpenXmlElement): Node | Node[] | null {
 		switch (elem.type) {
 			case DomType.Paragraph:
 				return this.renderParagraph(elem as WmlParagraph);
@@ -748,7 +748,7 @@ section.${c}>footer { z-index: 1; }
 
 			case DomType.Hyperlink:
 				return this.renderHyperlink(elem);
-			
+
 			case DomType.SmartTag:
 				return this.renderSmartTag(elem);
 
@@ -761,12 +761,9 @@ section.${c}>footer { z-index: 1; }
 			case DomType.Text:
 				return this.renderText(elem as WmlText);
 
-			case DomType.Text:
-				return this.renderText(elem as WmlText);
-
 			case DomType.DeletedText:
 				return this.renderDeletedText(elem as WmlText);
-	
+
 			case DomType.Tab:
 				return this.renderTab(elem);
 
@@ -800,10 +797,10 @@ section.${c}>footer { z-index: 1; }
 
 			case DomType.VmlElement:
 				return this.renderVmlElement(elem as VmlElement);
-	
+
 			case DomType.MmlMath:
 				return this.renderContainerNS(elem, ns.mathML, "math", { xmlns: ns.mathML });
-	
+
 			case DomType.MmlMathParagraph:
 				return this.renderContainer(elem, "span");
 
@@ -811,7 +808,7 @@ section.${c}>footer { z-index: 1; }
 				return this.renderContainerNS(elem, ns.mathML, "mfrac");
 
 			case DomType.MmlBase:
-				return this.renderContainerNS(elem, ns.mathML, 
+				return this.renderContainerNS(elem, ns.mathML,
 					elem.parent.type == DomType.MmlMatrixRow ? "mtd" : "mrow");
 
 			case DomType.MmlNumerator:
@@ -832,7 +829,7 @@ section.${c}>footer { z-index: 1; }
 
 			case DomType.MmlMatrixRow:
 				return this.renderContainerNS(elem, ns.mathML, "mtr");
-	
+
 			case DomType.MmlRadical:
 				return this.renderMmlRadical(elem);
 
@@ -849,7 +846,7 @@ section.${c}>footer { z-index: 1; }
 
 			case DomType.MmlFunctionName:
 				return this.renderContainerNS(elem, ns.mathML, "ms");
-	
+
 			case DomType.MmlDelimiter:
 				return this.renderMmlDelimiter(elem);
 
@@ -864,7 +861,7 @@ section.${c}>footer { z-index: 1; }
 
 			case DomType.MmlBar:
 				return this.renderMmlBar(elem);
-	
+
 			case DomType.MmlEquationArray:
 				return this.renderMllList(elem);
 
@@ -882,9 +879,6 @@ section.${c}>footer { z-index: 1; }
 
 			case DomType.CommentReference:
 				return this.renderCommentReference(elem);
-
-			case DomType.AltChunk:
-				return this.renderAltChunk(elem);
 		}
 
 		return null;
@@ -924,26 +918,52 @@ section.${c}>footer { z-index: 1; }
 		return result;
 	}
 
+	safeHyperlinkRef(value: string) {
+		try {
+			const u = new URL(value, "gopher:///nowhere");
+
+			if (u.protocol === 'http:' || u.protocol === 'https:'
+				|| u.protocol === 'mailto:' || u.protocol === 'blob:') {
+
+				return true;
+			}
+		}
+		catch(_) {}
+
+		console.error('UNSAFE hyperlink..', value);
+	}
+
 	renderHyperlink(elem: WmlHyperlink) {
+		const b = "about:blank";
 		const res = this.toH(elem, ns.html, "a");
-		res.href = '';
+		res.href = b;
 
 		if (elem.id) {
 			const rel = this.document.documentPart.rels.find(it => it.id == elem.id && it.targetMode === "External");
-			res.href = rel?.target ?? res.href;
+			const href = rel?.target ?? res.href;
+
+			if (href && this.safeHyperlinkRef(href)) {
+				res.href = href;
+				res.target = "_blank";
+				res.rel = "noopener noreferrer";
+			}
+		}
+
+		if (res.href === b) {
+			delete res.href;
 		}
 
 		if (elem.anchor) {
-			res.href += `#${elem.anchor}`;
+			res.href = `${res.href || ''}#${elem.anchor}`;
 		}
 
 		return this.h(res);
 	}
-	
+
 	renderSmartTag(elem: WmlSmartTag) {
 		return this.renderContainer(elem, "span");
 	}
-	
+
 	renderCommentRangeStart(commentStart: WmlCommentRangeStart) {
 		if (!this.options.renderComments)
 			return null;
@@ -978,7 +998,7 @@ section.${c}>footer { z-index: 1; }
 		if (!comment)
 			return null;
 
-		const commentRefEl = this.h({ tagName: "span", className: `${this.className}-comment-ref`, children: ['💬'] });
+		const commentRefEl = this.h({ tagName: "span", className: `${this.className}-comment-ref`, children: ["\u{1F4AC}"] });
 		const commentsContainerEl = this.h({
 			tagName: "div", className: `${this.className}-comment-popover`, children: [
 				this.h({ tagName: 'div', className: `${this.className}-comment-author`, children: [comment.author] }),
@@ -992,19 +1012,6 @@ section.${c}>footer { z-index: 1; }
 			commentRefEl,
 			commentsContainerEl
 		] });
-	}
-
-	renderAltChunk(elem: WmlAltChunk) {
-		if (!this.options.renderAltChunks)
-			return null;
-
-		var result = this.h({ tagName: "iframe" }) as HTMLIFrameElement;
-		
-		this.tasks.push(this.document.loadAltChunk(elem.id, this.currentPart).then(x => {
-			result.srcdoc = x;
-		}));
-
-		return result;
 	}
 
 	renderDrawing(elem: OpenXmlElement) {
@@ -1069,7 +1076,7 @@ section.${c}>footer { z-index: 1; }
 
 	renderChange(elem: WmlChange, tag: string) {
 		return this.renderContainer(elem, tag as any, {
-			dateTime: elem.date		
+			dateTime: elem.date
 		});
 	}
 
@@ -1202,7 +1209,7 @@ section.${c}>footer { z-index: 1; }
 
 		if (elem.imageHref?.id) {
 			this.tasks.push(this.document?.loadDocumentImage(elem.imageHref.id, this.currentPart)
-				.then(x => result.setAttribute("href", x)));
+				.then(x => this.safeHyperlinkRef(x) && result.setAttribute("href", x)));
 		}
 
 		container.appendChild(result);
@@ -1243,7 +1250,7 @@ section.${c}>footer { z-index: 1; }
 		return this.createMathMLElement("mroot", null, this.renderElements([base, degree]));
 	}
 
-	renderMmlDelimiter(elem: OpenXmlElement) {		
+	renderMmlDelimiter(elem: OpenXmlElement) {
 		const children = [];
 
 		children.push(this.createMathMLElement("mo", null, [elem.props.beginChar ?? '(']));
@@ -1253,7 +1260,7 @@ section.${c}>footer { z-index: 1; }
 		return this.createMathMLElement("mrow", null, children);
 	}
 
-	renderMmlNary(elem: OpenXmlElement) {		
+	renderMmlNary(elem: OpenXmlElement) {
 		const children = [];
 		const grouped = keyBy(elem.children, x => x.type);
 
@@ -1357,8 +1364,8 @@ section.${c}>footer { z-index: 1; }
 		for (const key in values) {
 			if (key.startsWith('$'))
 				continue;
-			
-			result += `  ${key}: ${values[key]};\r\n`;
+
+			result += `  ${key}: ${String(values[key]).split(/[{;}]/)[0]};\r\n`;
 		}
 
 		if (cssText)
@@ -1460,7 +1467,7 @@ section.${c}>footer { z-index: 1; }
 		return this.createElementNS(ns.svg, tagName, props, children);
 	}
 
-	later(func: Function) { 
+	later(func: Function) {
 		this.postRenderTasks.push(func);
 	}
 }

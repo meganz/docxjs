@@ -6,8 +6,8 @@ export interface ContentType {
     contentType: string;
 }
 
-export function parseContentTypes(root: Element, xml: XmlParser): ContentType[] {
-    return xml.elements(root).map(e => <ContentType>{
+export function parseContentTypes(root: Element | null, xml: XmlParser): ContentType[] {
+    return xml.elements(<Element>root).map(e => <ContentType>{
         extension: xml.attr(e, "Extension"),
         partName: xml.attr(e, "PartName"),
         contentType: xml.attr(e, "ContentType")

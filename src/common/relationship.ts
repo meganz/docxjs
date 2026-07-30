@@ -4,7 +4,7 @@ export interface Relationship {
     id: string,
     type: RelationshipTypes | string,
     target: string
-    targetMode: "" | "External" | string 
+    targetMode: "" | "External" | string
 }
 
 export enum RelationshipTypes {
@@ -30,8 +30,8 @@ export enum RelationshipTypes {
     AltChunk = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk"
 }
 
-export function parseRelationships(root: Element, xml: XmlParser): Relationship[] {
-    return xml.elements(root).map(e => <Relationship>{
+export function parseRelationships(root: Element | null, xml: XmlParser): Relationship[] {
+    return xml.elements(<Element>root).map(e => <Relationship>{
         id: xml.attr(e, "Id"),
         type: xml.attr(e, "Type"),
         target: xml.attr(e, "Target"),

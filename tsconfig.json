@@ -8,7 +8,7 @@
     "pretty": true,
     "removeComments": true,
     "preserveConstEnums": true,
-    "sourceMap": true,
+    "sourceMap": false,
     "noEmitHelpers": false,
     "importHelpers": false,
     "esModuleInterop": true,

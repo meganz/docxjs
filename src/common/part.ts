@@ -3,9 +3,9 @@ import { OpenXmlPackage } from "./open-xml-package";
 import { Relationship } from "./relationship";
 
 export class Part {
-    protected _xmlDocument: Document;
+    protected _xmlDocument: Document | undefined;
 
-    rels: Relationship[];
+    rels: Relationship[] | null | undefined;
 
     constructor(protected _package: OpenXmlPackage, public path: string) {
     }
@@ -20,7 +20,9 @@ export class Part {
           this._xmlDocument = xmlDoc;
       }
 
-      this.parseXml(xmlDoc.firstElementChild);
+		if (xmlDoc.firstElementChild) {
+		    this.parseXml(xmlDoc.firstElementChild);
+	    }
     }
 
     save() {

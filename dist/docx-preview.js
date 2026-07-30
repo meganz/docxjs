@@ -46,7 +46,8 @@
         return className?.replace(/[ .]+/g, '-').replace(/[&]+/g, 'and').toLowerCase();
     }
     function encloseFontFamily(fontFamily) {
-        return /^[^"'].*\s.*[^"']$/.test(fontFamily) ? `'${fontFamily}'` : fontFamily;
+        fontFamily = String(fontFamily).replace(/[;<>{}]/g, '');
+        return /^[^"']/.test(fontFamily) ? `'${fontFamily.replace(/["']/g, '')}'` : fontFamily;
     }
     function splitPath(path) {
         let si = path.lastIndexOf('/') + 1;
@@ -238,7 +239,9 @@
             if (this._package.options.keepOrigin) {
                 this._xmlDocument = xmlDoc;
             }
-            this.parseXml(xmlDoc.firstElementChild);
+            if (xmlDoc.firstElementChild) {
+                this.parseXml(xmlDoc.firstElementChild);
+            }
         }
         save() {
             this._package.update(this.path, serializeXmlString(this._xmlDocument));
@@ -324,9 +327,9 @@
         load(path, type = "string") {
             return this.get(path)?.async(type) ?? Promise.resolve(null);
         }
-        async loadRelationships(path = null) {
+        async loadRelationships(path = '') {
             let relsPath = `_rels/.rels`;
-            if (path != null) {
+            if (path) {
                 const [f, fn] = splitPath(path);
                 relsPath = `${f}_rels/${fn}.rels`;
             }
@@ -777,7 +780,6 @@
         DomType["CommentReference"] = "commentReference";
         DomType["CommentRangeStart"] = "commentRangeStart";
         DomType["CommentRangeEnd"] = "commentRangeEnd";
-        DomType["AltChunk"] = "altChunk";
     })(DomType || (DomType = {}));
     class OpenXmlElementBase {
         constructor() {
@@ -1212,10 +1214,6 @@
             const x = await this._package.load(path, "uint8array");
             return x ? this.blobToURL(new Blob([deobfuscate(x, key)]), path) : x;
         }
-        async loadAltChunk(id, part) {
-            const path = this.getPathById(part ?? this.documentPart, id);
-            return path ? this._package.load(path, "string") : Promise.resolve(null);
-        }
         blobToURL(blob, path) {
             if (!blob)
                 return null;
@@ -1426,7 +1424,7 @@
             };
         }
         parseNotes(xmlDoc, elemName, elemClass) {
-            var result = [];
+            const result = [];
             for (let el of globalXmlParser.elements(xmlDoc, elemName)) {
                 const node = new elemClass();
                 node.id = globalXmlParser.attr(el, "id");
@@ -1437,7 +1435,7 @@
             return result;
         }
         parseComments(xmlDoc) {
-            var result = [];
+            const result = [];
             for (let el of globalXmlParser.elements(xmlDoc, "comment")) {
                 const item = new WmlComment();
                 item.id = globalXmlParser.attr(el, "id");
@@ -1450,9 +1448,9 @@
             return result;
         }
         parseDocumentFile(xmlDoc) {
-            var xbody = globalXmlParser.element(xmlDoc, "body");
-            var background = globalXmlParser.element(xmlDoc, "background");
-            var sectPr = globalXmlParser.element(xbody, "sectPr");
+            const xbody = globalXmlParser.element(xmlDoc, "body");
+            const background = globalXmlParser.element(xmlDoc, "background");
+            const sectPr = globalXmlParser.element(xbody, "sectPr");
             return {
                 type: DomType.Document,
                 children: this.parseBodyElements(xbody),
@@ -1489,7 +1487,7 @@
             return children;
         }
         parseStylesFile(xstyles) {
-            var result = [];
+            const result = [];
             for (const n of globalXmlParser.elements(xstyles)) {
                 switch (n.localName) {
                     case "style":
@@ -1610,7 +1608,7 @@
             return result;
         }
         parseTableStyle(node) {
-            var result = [];
+            const result = [];
             var type = globalXmlParser.attr(node, "type");
             var selector = "";
             var modificator = "";
@@ -1710,8 +1708,8 @@
             } : null;
         }
         parseAbstractNumbering(node, bullets) {
-            var result = [];
-            var id = globalXmlParser.attr(node, "abstractNumId");
+            const result = [];
+            const id = globalXmlParser.attr(node, "abstractNumId");
             for (const n of globalXmlParser.elements(node)) {
                 switch (n.localName) {
                     case "lvl":
@@ -1743,7 +1741,7 @@
                         this.parseDefaultProperties(n, result.rStyle);
                         break;
                     case "lvlPicBulletId":
-                        var bulletId = globalXmlParser.intAttr(n, "val");
+                        const bulletId = globalXmlParser.intAttr(n, "val");
                         result.bullet = bullets.find(x => x?.id == bulletId);
                         break;
                     case "lvlText":
@@ -1779,7 +1777,7 @@
             return { type: DomType.AltChunk, children: [], id: globalXmlParser.attr(node, "id") };
         }
         parseParagraph(node) {
-            var result = { type: DomType.Paragraph, children: [] };
+            const result = { type: DomType.Paragraph, children: [] };
             for (let el of globalXmlParser.elements(node)) {
                 switch (el.localName) {
                     case "pPr":
@@ -1847,11 +1845,12 @@
         }
         parseFrame(node, paragraph) {
             var dropCap = globalXmlParser.attr(node, "dropCap");
-            if (dropCap == "drop")
+            if (dropCap == "drop" && paragraph.cssStyle) {
                 paragraph.cssStyle["float"] = "left";
+            }
         }
         parseHyperlink(node, parent) {
-            var result = { type: DomType.Hyperlink, parent: parent, children: [] };
+            const result = { type: DomType.Hyperlink, parent: parent, children: [] };
             result.anchor = globalXmlParser.attr(node, "anchor");
             result.id = globalXmlParser.attr(node, "id");
             for (const c of globalXmlParser.elements(node)) {
@@ -1864,9 +1863,9 @@
             return result;
         }
         parseSmartTag(node, parent) {
-            var result = { type: DomType.SmartTag, parent, children: [] };
-            var uri = globalXmlParser.attr(node, "uri");
-            var element = globalXmlParser.attr(node, "element");
+            const result = { type: DomType.SmartTag, parent, children: [] };
+            const uri = globalXmlParser.attr(node, "uri");
+            const element = globalXmlParser.attr(node, "element");
             if (uri)
                 result.uri = uri;
             if (element)
@@ -2052,8 +2051,8 @@
                 return elem;
             var choice = globalXmlParser.element(elem, "Choice");
             if (choice) {
-                var requires = globalXmlParser.attr(choice, "Requires");
-                var namespaceURI = elem.lookupNamespaceURI(requires);
+                const requires = globalXmlParser.attr(choice, "Requires");
+                const namespaceURI = elem.lookupNamespaceURI(requires) || '';
                 if (supportedNamespaceURIs.includes(namespaceURI))
                     return choice.firstElementChild;
             }
@@ -2069,8 +2068,8 @@
             }
         }
         parseDrawingWrapper(node) {
-            var result = { type: DomType.Drawing, children: [], cssStyle: {} };
-            var isAnchor = node.localName == "anchor";
+            const result = { type: DomType.Drawing, children: [], cssStyle: {} };
+            const isAnchor = node.localName == "anchor";
             let wrapType = null;
             let simplePos = globalXmlParser.boolAttr(node, "simplePos");
             globalXmlParser.boolAttr(node, "behindDoc");
@@ -2147,7 +2146,7 @@
             return null;
         }
         parsePicture(elem) {
-            var result = { type: DomType.Image, src: "", cssStyle: {} };
+            const result = { type: DomType.Image, src: "", cssStyle: {} };
             var blipFill = globalXmlParser.element(elem, "blipFill");
             var blip = globalXmlParser.element(blipFill, "blip");
             var srcRect = globalXmlParser.element(blipFill, "srcRect");
@@ -2181,7 +2180,7 @@
             return result;
         }
         parseTable(node) {
-            var result = { type: DomType.Table, children: [] };
+            const result = { type: DomType.Table, children: [] };
             for (const c of globalXmlParser.elements(node)) {
                 switch (c.localName) {
                     case "tr":
@@ -2198,7 +2197,7 @@
             return result;
         }
         parseTableColumns(node) {
-            var result = [];
+            const result = [];
             for (const n of globalXmlParser.elements(node)) {
                 switch (n.localName) {
                     case "gridCol":
@@ -2253,6 +2252,7 @@
             var bottomFromText = globalXmlParser.lengthAttr(node, "bottomFromText");
             var rightFromText = globalXmlParser.lengthAttr(node, "rightFromText");
             var leftFromText = globalXmlParser.lengthAttr(node, "leftFromText");
+            table.cssStyle = table.cssStyle || {};
             table.cssStyle["float"] = 'left';
             table.cssStyle["margin-bottom"] = values.addSize(table.cssStyle["margin-bottom"], bottomFromText);
             table.cssStyle["margin-left"] = values.addSize(table.cssStyle["margin-left"], leftFromText);
@@ -2260,7 +2260,7 @@
             table.cssStyle["margin-top"] = values.addSize(table.cssStyle["margin-top"], topFromText);
         }
         parseTableRow(node) {
-            var result = { type: DomType.Row, children: [] };
+            const result = { type: DomType.Row, children: [] };
             for (const c of globalXmlParser.elements(node)) {
                 switch (c.localName) {
                     case "tc":
@@ -2296,7 +2296,7 @@
             });
         }
         parseTableCell(node) {
-            var result = { type: DomType.Cell, children: [] };
+            const result = { type: DomType.Cell, children: [] };
             for (const c of globalXmlParser.elements(node)) {
                 switch (c.localName) {
                     case "tbl":
@@ -2645,16 +2645,20 @@
                 else if (knownColors.includes(v)) {
                     return v;
                 }
+                else if (!/^[\dA-Fa-f]{3,}$/.test(v)) {
+                    console.error('UNSAFE color-attr', v);
+                    return knownColors[Math.random() * knownColors.length - 1 | 0];
+                }
                 return `#${v}`;
             }
-            var themeColor = globalXmlParser.attr(node, "themeColor");
-            return themeColor ? `var(--docx-${themeColor}-color)` : defValue;
+            const themeColor = globalXmlParser.attr(node, "themeColor");
+            return themeColor ? `var(--docx-${String(themeColor).replace(/\W/g, '')}-color)` : defValue;
         }
     }
     class values {
         static themeValue(c, attr) {
             var val = globalXmlParser.attr(c, attr);
-            return val ? `var(--docx-${val}-font)` : null;
+            return val ? `var(--docx-${val.replace(/\W/g, '')}-font)` : null;
         }
         static valueOfSize(c, attr) {
             var type = LengthUsage.Dxa;
@@ -2868,6 +2872,39 @@
         ns["svg"] = "http://www.w3.org/2000/svg";
         ns["mathML"] = "http://www.w3.org/1998/Math/MathML";
     })(ns || (ns = {}));
+    const dumb = {
+        'BASE': 1,
+        'BLINK': 1,
+        'EMBED': 1,
+        'FRAME': 1,
+        'FRAMESET': 1,
+        'IFRAME': 1,
+        'LINK': 1,
+        'MARQUEE': 1,
+        'META': 1,
+        'OBJECT': 1,
+        'SCRIPT': 1,
+        'SVG': 1,
+        'XML': 1
+    };
+    const safe = (e) => {
+        const nn = isString(e) ? e : `${e && e.nodeName}`;
+        const tag = nn.slice(nn.indexOf(':') + 1).toUpperCase();
+        if (!e || dumb[tag]) {
+            return false;
+        }
+        if (!isString(e)) {
+            const content = String(e.outerHTML).replace(/[\s\x00-\x19]+/g, '').toLowerCase();
+            if (/script:/.test(content)) {
+                return false;
+            }
+            if (tag === 'STYLE'
+                && String(e.textContent).replace(/blob:[^-;()]+/g, '').includes('//')) {
+                return false;
+            }
+        }
+        return true;
+    };
     function h(elem) {
         if (isString(elem))
             return document.createTextNode(elem);
@@ -2877,7 +2914,11 @@
         if (tagName === "#fragment")
             return document.createDocumentFragment();
         if (tagName === "#comment")
-            return document.createComment(children[0]);
+            return document.createComment(children && children[0] || '');
+        if (!safe(tagName)) {
+            console.error('UNSAFE tagName', tagName);
+            return document.createTextNode("\u{1F95A}");
+        }
         const result = (ns ? document.createElementNS(ns, tagName) : document.createElement(tagName));
         if (className)
             result.setAttribute("class", className);
@@ -2891,11 +2932,20 @@
         }
         if (props) {
             for (const [key, value] of Object.entries(props))
-                if (value !== undefined)
+                if (value !== undefined && !key.toLowerCase().startsWith('on'))
                     result[key] = value;
         }
-        if (children)
-            children.forEach(c => result.appendChild(h(c)));
+        if (children) {
+            children.forEach(c => {
+                const n = h(c);
+                if (safe(n)) {
+                    result.appendChild(n);
+                }
+                else {
+                    console.error('UNSAFE children', c, [n]);
+                }
+            });
+        }
         return result;
     }
     function cx(...classNames) {
@@ -2926,7 +2976,7 @@
             this.options = options;
             this.className = options.className;
             this.rootSelector = options.inWrapper ? `.${this.className}-wrapper` : ':root';
-            this.h = options.h ?? h;
+            this.h = h;
             this.styleMap = null;
             this.tasks = [];
             if (this.options.renderComments && globalThis.Highlight) {
@@ -3421,8 +3471,6 @@ section.${c}>footer { z-index: 1; }
                     return this.renderImage(elem);
                 case DomType.Text:
                     return this.renderText(elem);
-                case DomType.Text:
-                    return this.renderText(elem);
                 case DomType.DeletedText:
                     return this.renderDeletedText(elem);
                 case DomType.Tab:
@@ -3504,8 +3552,6 @@ section.${c}>footer { z-index: 1; }
                     return this.renderCommentRangeEnd(elem);
                 case DomType.CommentReference:
                     return this.renderCommentReference(elem);
-                case DomType.AltChunk:
-                    return this.renderAltChunk(elem);
             }
             return null;
         }
@@ -3533,15 +3579,35 @@ section.${c}>footer { z-index: 1; }
             }
             return result;
         }
+        safeHyperlinkRef(value) {
+            try {
+                const u = new URL(value, "gopher:///nowhere");
+                if (u.protocol === 'http:' || u.protocol === 'https:'
+                    || u.protocol === 'mailto:' || u.protocol === 'blob:') {
+                    return true;
+                }
+            }
+            catch (_) { }
+            console.error('UNSAFE hyperlink..', value);
+        }
         renderHyperlink(elem) {
+            const b = "about:blank";
             const res = this.toH(elem, ns.html, "a");
-            res.href = '';
+            res.href = b;
             if (elem.id) {
                 const rel = this.document.documentPart.rels.find(it => it.id == elem.id && it.targetMode === "External");
-                res.href = rel?.target ?? res.href;
+                const href = rel?.target ?? res.href;
+                if (href && this.safeHyperlinkRef(href)) {
+                    res.href = href;
+                    res.target = "_blank";
+                    res.rel = "noopener noreferrer";
+                }
+            }
+            if (res.href === b) {
+                delete res.href;
             }
             if (elem.anchor) {
-                res.href += `#${elem.anchor}`;
+                res.href = `${res.href || ''}#${elem.anchor}`;
             }
             return this.h(res);
         }
@@ -3572,7 +3638,7 @@ section.${c}>footer { z-index: 1; }
             var comment = this.document.commentsPart?.commentMap[commentRef.id];
             if (!comment)
                 return null;
-            const commentRefEl = this.h({ tagName: "span", className: `${this.className}-comment-ref`, children: ['💬'] });
+            const commentRefEl = this.h({ tagName: "span", className: `${this.className}-comment-ref`, children: ["\u{1F4AC}"] });
             const commentsContainerEl = this.h({
                 tagName: "div", className: `${this.className}-comment-popover`, children: [
                     this.h({ tagName: 'div', className: `${this.className}-comment-author`, children: [comment.author] }),
@@ -3585,15 +3651,6 @@ section.${c}>footer { z-index: 1; }
                     commentRefEl,
                     commentsContainerEl
                 ] });
-        }
-        renderAltChunk(elem) {
-            if (!this.options.renderAltChunks)
-                return null;
-            var result = this.h({ tagName: "iframe" });
-            this.tasks.push(this.document.loadAltChunk(elem.id, this.currentPart).then(x => {
-                result.srcdoc = x;
-            }));
-            return result;
         }
         renderDrawing(elem) {
             var result = this.toHTML(elem, ns.html, "div");
@@ -3739,7 +3796,7 @@ section.${c}>footer { z-index: 1; }
             const result = this.renderVmlChildElement(elem);
             if (elem.imageHref?.id) {
                 this.tasks.push(this.document?.loadDocumentImage(elem.imageHref.id, this.currentPart)
-                    .then(x => result.setAttribute("href", x)));
+                    .then(x => this.safeHyperlinkRef(x) && result.setAttribute("href", x)));
             }
             container.appendChild(result);
             requestAnimationFrame(() => {
@@ -3863,7 +3920,7 @@ section.${c}>footer { z-index: 1; }
             for (const key in values) {
                 if (key.startsWith('$'))
                     continue;
-                result += `  ${key}: ${values[key]};\r\n`;
+                result += `  ${key}: ${String(values[key]).split(/[{;}]/)[0]};\r\n`;
             }
             if (cssText)
                 result += cssText;
@@ -3974,8 +4031,7 @@ section.${c}>footer { z-index: 1; }
         useBase64URL: false,
         renderChanges: false,
         renderComments: false,
-        renderAltChunks: true,
-        h: h
+        h() { }
     };
     function parseAsync(data, userOptions) {
         const ops = { ...defaultOptions, ...userOptions };
@@ -3990,8 +4046,8 @@ section.${c}>footer { z-index: 1; }
         const doc = await parseAsync(data, userOptions);
         const nodes = await renderDocument(doc, userOptions);
         styleContainer ?? (styleContainer = bodyContainer);
-        styleContainer.innerHTML = "";
-        bodyContainer.innerHTML = "";
+        styleContainer.textContent = "";
+        bodyContainer.textContent = "";
         for (let n of nodes) {
             const c = n.nodeName === "STYLE" ? styleContainer : bodyContainer;
             c.appendChild(n);
@@ -4005,4 +4061,3 @@ section.${c}>footer { z-index: 1; }
     exports.renderDocument = renderDocument;
 
 }));
-//# sourceMappingURL=docx-preview.js.map

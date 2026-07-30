@@ -10,7 +10,7 @@ export type CommentsExtended = {
 
 export class CommentsExtendedPart extends Part {
     comments: CommentsExtended[] = [];
-    commentMap: Record<string, CommentsExtended>;
+    commentMap: Record<string, CommentsExtended> | undefined;
 
     constructor(pkg: OpenXmlPackage, path: string) {
         super(pkg, path);

@@ -18,7 +18,7 @@ export enum DomType {
     BookmarkEnd = "bookmarkEnd",
     Footer = "footer",
     Header = "header",
-    FootnoteReference = "footnoteReference", 
+    FootnoteReference = "footnoteReference",
 	EndnoteReference = "endnoteReference",
     Footnote = "footnote",
     Endnote = "endnote",
@@ -59,16 +59,15 @@ export enum DomType {
 	Comment = "comment",
 	CommentReference = "commentReference",
 	CommentRangeStart = "commentRangeStart",
-	CommentRangeEnd = "commentRangeEnd",
-    AltChunk = "altChunk"
+	CommentRangeEnd = "commentRangeEnd"
 }
 
 export interface OpenXmlElement {
     type: DomType;
     children?: OpenXmlElement[];
-    cssStyle?: Record<string, string>;
+    cssStyle?: Record<string, string> | object;
     props?: Record<string, any>;
-    
+
 	styleName?: string; //style name
 	className?: string; //class mods
 
@@ -157,7 +156,7 @@ export interface IDomNumbering {
     id: string;
     level: number;
     start: number;
-    pStyleName: string;
+    pStyleName: string | undefined;
     pStyle: Record<string, string>;
     rStyle: Record<string, string>;
     levelText?: string;

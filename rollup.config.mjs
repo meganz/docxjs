@@ -1,5 +1,4 @@
 import typescript from '@rollup/plugin-typescript';
-import terser from '@rollup/plugin-terser';
 
 const output = {
 	banner: `/*
@@ -8,7 +7,7 @@ const output = {
  * Released under Apache License 2.0  <https://github.com/VolodymyrBaydalka/docxjs/blob/master/LICENSE>
  * Copyright Volodymyr Baydalka
  */`,
-	sourcemap: true,
+	sourcemap: false,
 }
 
 const umdOutput = {
@@ -25,27 +24,8 @@ export default args => {
 	const config = {
 		input: 'src/docx-preview.ts',
 		output: [umdOutput],
-		plugins: [typescript()]
+		external: ['jszip'],
+		plugins: [typescript({noEmitOnError: false})]
 	}
-
-	if (args.environment == 'BUILD:production')
-		config.output = [umdOutput,
-			{
-				...umdOutput,
-				file: 'dist/docx-preview.min.js',
-				plugins: [terser()]
-			},
-			{
-				...output,
-				file: 'dist/docx-preview.mjs',
-				format: 'es',
-			},
-			{
-				...output,
-				file: 'dist/docx-preview.min.mjs',
-				format: 'es',
-				plugins: [terser()]
-			}];
-
 	return config
 };

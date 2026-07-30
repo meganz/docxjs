@@ -37,10 +37,10 @@ export class OpenXmlPackage {
         return this.get(path)?.async(type) ?? Promise.resolve(null);
     }
 
-    async loadRelationships(path: string = null): Promise<Relationship[]> {
+    async loadRelationships(path: string = ''): Promise<Relationship[] | null> {
         let relsPath = `_rels/.rels`;
 
-        if (path != null) {
+        if (path) {
             const [f, fn] = splitPath(path);
             relsPath = `${f}_rels/${fn}.rels`;
         }

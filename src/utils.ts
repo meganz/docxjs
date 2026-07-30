@@ -3,7 +3,8 @@ export function escapeClassName(className: string) {
 }
 
 export function encloseFontFamily(fontFamily: string): string {
-    return /^[^"'].*\s.*[^"']$/.test(fontFamily) ? `'${fontFamily}'` : fontFamily;
+    fontFamily = String(fontFamily).replace(/[;<>{}]/g, '');
+    return /^[^"']/.test(fontFamily) ? `'${fontFamily.replace(/["']/g, '')}'` : fontFamily;
 }
 
 export function splitPath(path: string): [string, string] {
@@ -49,9 +50,9 @@ export function isString(item: unknown): item is string {
 }
 
 export function mergeDeep(target, ...sources) {
-    if (!sources.length) 
+    if (!sources.length)
         return target;
-    
+
     const source = sources.shift();
 
     if (isObject(target) && isObject(source)) {

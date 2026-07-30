@@ -7,8 +7,8 @@ import { keyBy } from "../utils";
 export class CommentsPart extends Part {
     protected _documentParser: DocumentParser;
 
-    comments: WmlComment[]
-    commentMap: Record<string, WmlComment>;
+    comments: WmlComment[] | undefined
+    commentMap: Record<string, WmlComment> | undefined;
 
     constructor(pkg: OpenXmlPackage, path: string, parser: DocumentParser) {
         super(pkg, path);

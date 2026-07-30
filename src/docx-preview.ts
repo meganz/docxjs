@@ -1,7 +1,6 @@
 import { WordDocument } from './word-document';
 import { DocumentParser } from './document-parser';
 import { HtmlRenderer } from './html-renderer';
-import { h } from './html';
 
 export interface Options {
     inWrapper: boolean;
@@ -22,8 +21,7 @@ export interface Options {
 	useBase64URL: boolean;
 	renderChanges: boolean;
     renderComments: boolean;
-    renderAltChunks: boolean;
-    h: typeof h;
+    h: object;
 }
 
 export const defaultOptions: Options = {
@@ -45,8 +43,7 @@ export const defaultOptions: Options = {
 	useBase64URL: false,
 	renderChanges: false,
     renderComments: false,
-    renderAltChunks: true,
-    h: h
+    h() {}
 };
 
 export function parseAsync(data: Blob | any, userOptions?: Partial<Options>): Promise<any>  {
@@ -65,13 +62,13 @@ export async function renderAsync(data: Blob | any, bodyContainer: HTMLElement, 
 	const nodes = await renderDocument(doc, userOptions);
 
     styleContainer ??= bodyContainer;
-    styleContainer.innerHTML = "";
-    bodyContainer.innerHTML = "";
+    styleContainer.textContent = "";
+    bodyContainer.textContent = "";
 
     for (let n of nodes) {
         const c = n.nodeName === "STYLE" ? styleContainer : bodyContainer;
         c.appendChild(n);
     }
-    
+
     return doc;
 }
